@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NightCart · Shopping Cart</title><link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="topbar"><a class="brand" th:href="@{/}"><span class="brand-mark">N</span><span><b>NightCart</b><small>SHOP</small></span></a>
+  <div class="account-actions"><span class="account-name" th:text="${customer}">Account</span><span class="pill" th:if="${isAdmin}">ADMIN</span><form method="post" th:action="@{/logout}"><button type="submit" class="button secondary">Log out</button></form></div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><p class="nav-label">SHOP</p>
+    <a th:href="@{/}" th:classappend="${page == 'dashboard' ? 'active' : ''}">Overview</a>
+    <a th:href="@{/products}" th:classappend="${page == 'products' ? 'active' : ''}">Products</a>
+    <a th:href="@{/cart}" th:classappend="${page == 'cart' ? 'active' : ''}">Shopping cart <span class="count" th:text="${cartRows.size()}">0</span></a>
+    <a th:href="@{/orders}" th:classappend="${page == 'orders' ? 'active' : ''}">Orders</a>
+    <a th:if="${isAdmin}" th:href="@{/analytics}" th:classappend="${page == 'analytics' ? 'active' : ''}">Sales analytics</a>
+    <a th:href="@{/recommendations(customer=${customer})}" th:classappend="${page == 'recommendations' ? 'active' : ''}">Recommendations</a>
+    <p class="nav-label" th:if="${isAdmin}">ADMIN</p>
+    <a th:if="${isAdmin}" th:href="@{/databases}" th:classappend="${page == 'databases' ? 'active' : ''}">Database overview</a>
+    <a th:if="${isAdmin}" th:href="@{/activity}" th:classappend="${page == 'activity' ? 'active' : ''}">Database activity <span class="count" th:text="${activityCount}">0</span></a>
+  </aside>
+  <main class="content">
+    <div class="flash success" th:if="${message}" th:text="${message}"></div><div class="flash error" th:if="${error}" th:text="${error}"></div>
+    <section th:if="${page=='dashboard'}">
+      <div class="page-head"><div><p class="eyebrow">OVERVIEW</p><h1>Hi, <span th:text="${customer}">Customer</span></h1></div><a class="button" th:href="@{/products(customer=${customer})}">Browse products</a></div>
+      <div class="status-grid" th:if="${isAdmin}"><div class="status-card" th:each="entry : ${statuses}"><div class="status-line"><b th:text="${entry.key}">Redis</b><span class="pill" th:classappend="${entry.value == 'Online' ? 'online' : 'offline'}" th:text="${entry.value}">Online</span></div></div></div>
+      <div class="metric-grid" th:if="${isAdmin}"><div class="metric"><small>Products</small><strong th:text="${productsCount}">8</strong></div><div class="metric"><small>Known customers</small><strong th:text="${customerCount}">0</strong></div><div class="metric"><small>Orders</small><strong th:text="${orderCount}">0</strong></div><div class="metric"><small>Recorded sales</small><strong th:text="${'₹'+#numbers.formatDecimal(totalSales,1,2)}">₹0.00</strong></div></div>
+      <div class="two-col"><div class="panel"><div class="panel-head"><h2>Featured products</h2><a th:href="@{/products}">View all</a></div><div class="simple-row" th:each="p,iter : ${products}" th:if="${iter.index<4}"><span class="product-icon" th:text="${p.icon}">📦</span><div class="row-main"><b th:text="${p.name}">Product</b><small th:text="${p.category}">Category</small></div><strong th:text="${'₹'+#numbers.formatDecimal(p.price,1,2)}">₹0</strong></div></div>
+        <div class="panel" th:if="${isAdmin}"><div class="panel-head"><h2>Recent activity</h2></div><pre class="recent" th:text="${recentActivity==''?'No recent activity yet.':recentActivity}">No activity</pre><a class="text-link" th:href="@{/activity(database='Redis')}">View activity →</a></div></div>
+    </section>
+
+    <section th:if="${page=='products'}"><div class="page-head"><div><p class="eyebrow">CATALOGUE</p><h1>Products</h1></div></div>
+      <form class="filter-bar" method="get" th:action="@{/products}"><input name="q" th:value="${q}" placeholder="Search products"><select name="category"><option value="">All categories</option><option th:each="c:${categories}" th:value="${c}" th:text="${c}" th:selected="${category==c}"></option></select><button class="button secondary" type="submit">Search</button><a class="text-link" th:href="@{/products}">Clear</a></form>
+      <div class="product-grid"><article class="product-card" th:each="p:${products}"><div class="product-icon large" th:text="${p.icon}">📦</div><p class="category" th:text="${p.category}">Category</p><h3 th:text="${p.name}">Product</h3><p class="muted description" th:text="${p.description}">Description</p><div class="product-bottom"><strong th:text="${'₹'+#numbers.formatDecimal(p.price,1,2)}">₹0</strong><small th:text="${p.stock+' in stock'}">Stock</small></div><form method="post" th:action="@{/cart/add}"><input type="hidden" name="productId" th:value="${p.id}"><label class="qty-label">Qty <input type="number" name="quantity" value="1" min="1" th:attr="max=${p.stock}"></label><button class="button" type="submit" th:disabled="${p.stock<1}">Add to cart</button></form><a class="text-link small-link" th:href="@{/recommendations(customer=${customer},productId=${p.id})}">Related products</a></article></div>
+      <details class="panel add-product" th:if="${isAdmin}"><summary>Add a product</summary><form class="form-grid" method="post" th:action="@{/products/add}"><label>Product ID <input name="id" placeholder="Auto-generate"></label><label>Name <input name="name" required></label><label>Category <input name="category" required></label><label>Description <input name="description" value="New catalogue item"></label><label>Icon/emoji <input name="icon" value="📦" maxlength="8"></label><label>Price (₹) <input name="price" type="number" min="1" step="0.01" required></label><label>Stock <input name="stock" type="number" min="0" value="1" required></label><button class="button" type="submit">Save product</button></form></details>
+    </section>
+
+    <section th:if="${page=='cart'}"><div class="page-head"><div><h1>Shopping cart</h1></div></div>
+      <div class="panel" th:if="${cartRows.isEmpty()}"><h2>Your cart is empty</h2><p class="muted">Browse products and add something to begin.</p><a class="button" th:href="@{/products(customer=${customer})}">Browse products</a></div>
+      <div class="panel" th:unless="${cartRows.isEmpty()}"><div class="table-wrap"><table><thead><tr><th>Product</th><th>Price</th><th>Quantity</th><th>Total</th><th></th></tr></thead><tbody><tr th:each="row:${cartRows}"><td><span th:text="${row.product.icon}">📦</span> <b th:text="${row.product.name}">Product</b></td><td th:text="${'₹'+#numbers.formatDecimal(row.product.price,1,2)}">₹0</td><td th:text="${row.quantity}">1</td><td th:text="${'₹'+#numbers.formatDecimal(row.lineTotal,1,2)}">₹0</td><td><form method="post" th:action="@{/cart/remove}"><input type="hidden" name="productId" th:value="${row.product.id}"><button class="button danger" type="submit">Remove</button></form></td></tr></tbody></table></div><div class="checkout-row"><div><small class="muted">Order total</small><h2 th:text="${'₹'+#numbers.formatDecimal(cartTotal,1,2)}">₹0</h2></div><form method="post" th:action="@{/checkout}"><button class="button" type="submit">Place demo order</button></form></div></div>
+    </section>
+
+    <section th:if="${page=='orders'}"><div class="page-head"><div><h1>Orders</h1></div></div><div class="panel" th:if="${orders.isEmpty()}"><p>No orders yet. Add products to your cart and place a demo order.</p></div><div class="panel order-card" th:each="order:${orders}"><div class="order-head"><div><b th:text="${order.id}">ORD-000</b><small><span th:if="${isAdmin}" th:text="${order.customerName+' · '}">Customer · </span><span th:text="${order.createdAt}">time</span></small></div><div class="order-actions"><span class="pill" th:classappend="${order.status == 'Cancelled' ? 'offline' : 'online'}" th:text="${order.status}">Confirmed</span><form th:if="${order.status != 'Cancelled'}" method="post" th:action="@{/orders/cancel}" onsubmit="return confirm('Cancel this order? It will remain in order history and be excluded from sales analytics.');"><input type="hidden" name="orderId" th:value="${order.id}"><button class="button danger" type="submit">Cancel order</button></form></div></div><div class="order-lines"><div class="simple-row" th:each="line:${order.items}"><span class="row-main" th:text="${line.name+' × '+line.quantity}">Product × 1</span><strong th:text="${'₹'+#numbers.formatDecimal(line.lineTotal,1,2)}">₹0</strong></div></div><div class="order-total"><span>Total</span><b th:text="${'₹'+#numbers.formatDecimal(order.total,1,2)}">₹0</b></div></div></section>
+
+    <section th:if="${page=='analytics'}">
+      <div class="page-head"><div>
+        
+        <h1>Sales analytics</h1>
+        
+      </div></div>
+      <div class="panel"><div class="panel-head"><h2>Revenue by product</h2>
+        
+      </div>
+      <div th:if="${analyticsRows.isEmpty()}" class="empty"><p>No sales rows returned yet.</p>
+      </div>
+      <div class="table-wrap" th:unless="${analyticsRows.isEmpty()}"><table><thead><tr><th>Product</th><th>Units sold</th><th>Revenue</th></tr></thead><tbody>
+        <tr th:each="r:${analyticsRows}"><td th:text="${r.productName}">Product</td><td th:text="${r.units}">0</td><td th:text="${'₹'+#numbers.formatDecimal(r.revenue,1,2)}">₹0</td></tr>
+      </tbody></table></div>
+      </div>
+    </section>
+
+    <section th:if="${page=='recommendations'}"><div class="page-head"><div><h1>Recommendations</h1></div></div><div class="panel"><p th:if="${sourceProduct!=null}">Related to <b th:text="${sourceProduct.name}">Product</b></p><div class="product-grid compact"><article class="product-card" th:each="p:${recommendations}"><div class="product-icon large" th:text="${p.icon}">📦</div><p class="category" th:text="${p.category}">Category</p><h3 th:text="${p.name}">Product</h3><p class="muted" th:text="${p.description}">Description</p><a class="button secondary" th:href="@{/recommendations(customer=${customer},productId=${p.id})}">Explore related</a></article></div><p class="muted" th:if="${recommendations.isEmpty()}">No related products were returned. Browse the catalogue and try again.</p></div></section>
+
+    <section th:if="${page=='databases'}"><div class="page-head"><div><p class="eyebrow">CONNECTION CHECKS</p><h1>Database overview</h1></div><a class="button secondary" th:href="@{/databases}">Refresh status</a></div><div class="status-grid detailed"><div class="panel" th:each="entry:${statuses}"><div class="status-line"><h2 th:text="${entry.key}">Database</h2><span class="pill" th:classappend="${entry.value == 'Online' ? 'online' : 'offline'}" th:text="${entry.value}">Online</span></div><a class="text-link" th:href="@{/activity(customer=${customer},database=${entry.key})}">View this database's log →</a></div></div></section>
+
+    <section th:if="${page=='activity'}"><div class="page-head"><div><p class="eyebrow">AUDIT TRAIL</p><h1>Database activity</h1></div></div><form class="filter-bar" method="get" th:action="@{/activity}"><select name="database"><option value="">All databases</option><option value="Redis" th:selected="${selectedDatabase=='Redis'}">Redis</option><option value="MongoDB" th:selected="${selectedDatabase=='MongoDB'}">MongoDB</option><option value="MonetDB" th:selected="${selectedDatabase=='MonetDB'}">MonetDB</option><option value="Neo4j" th:selected="${selectedDatabase=='Neo4j'}">Neo4j</option><option value="System" th:selected="${selectedDatabase=='System'}">System</option></select><select name="status"><option value="">All results</option><option value="SUCCESS" th:selected="${selectedStatus=='SUCCESS'}">Success</option><option value="FAILED" th:selected="${selectedStatus=='FAILED'}">Failed</option><option value="INFO" th:selected="${selectedStatus=='INFO'}">Info</option></select><button class="button secondary" type="submit">Filter logs</button><a class="text-link" th:href="@{/activity}">Clear</a></form><div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>Database</th><th>Operation</th><th>Result</th><th>Duration</th><th>Details / message</th></tr></thead><tbody><tr th:each="e:${activityEvents}"><td class="nowrap" th:text="${e.timestamp}">Time</td><td><b th:text="${e.database}">Redis</b></td><td th:text="${e.operation}">PING</td><td><span class="pill" th:classappend="${e.status == 'SUCCESS' ? 'online' : (e.status == 'FAILED' ? 'offline' : '')}" th:text="${e.status}">SUCCESS</span></td><td class="nowrap" th:text="${e.durationMs+' ms'}">0 ms</td><td><span th:text="${e.details}">Details</span><small class="log-message" th:if="${!#strings.isEmpty(e.message)}" th:text="${e.message}">Message</small></td></tr></tbody></table></div><div class="empty" th:if="${activityEvents.isEmpty()}">No matching log entries yet.</div></div></section>
+  </main>
+</div>
+
+</body></html>
