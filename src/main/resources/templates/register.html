@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Create account · NightCart</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body class="auth-page">
+  <main class="auth-card">
+    <a class="brand auth-brand" th:href="@{/login}"><span class="brand-mark">N</span><span><b>NightCart</b><small>CREATE ACCOUNT</small></span></a>
+    <h1>Create account</h1>
+    <p class="auth-subtitle">A few details and you're ready to shop.</p>
+    <form method="post" th:action="@{/register}" th:object="${form}" class="auth-form">
+      <label for="displayName">Your name</label><input id="displayName" th:field="*{displayName}" autocomplete="name" maxlength="60" required><small class="field-error" th:errors="*{displayName}"></small>
+      <label for="username">Username</label><input id="username" th:field="*{username}" autocomplete="username" minlength="3" maxlength="40" required><small class="field-hint">3–40 characters: letters, numbers, dots, underscores or hyphens.</small><small class="field-error" th:errors="*{username}"></small>
+      <label for="password">Password</label><input id="password" th:field="*{password}" type="password" autocomplete="new-password" minlength="8" maxlength="72" required><small class="field-error" th:errors="*{password}"></small>
+      <label for="confirmPassword">Confirm password</label><input id="confirmPassword" th:field="*{confirmPassword}" type="password" autocomplete="new-password" required><small class="field-error" th:errors="*{confirmPassword}"></small>
+      <button class="button auth-submit" type="submit">Create account</button>
+    </form>
+    <p class="auth-switch">Already registered? <a th:href="@{/login}">Sign in</a></p>
+  </main>
+</body></html>
